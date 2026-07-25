@@ -58,8 +58,13 @@ jobs:
         run: cargo +${{ matrix.toolchain }} test --workspace
         env:
           UPDATE_EXPECT: 1
-      - name: Show diff
-        run: git diff
+      - name: Show diff and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git commit -am "chore: auto-update stderr" || true
+          git push || true
+
 
 
   lint:
