@@ -376,8 +376,7 @@ impl<'tcx> LateLintPass<'tcx> for UnnecessaryStringToBytes {
             let peeled_ty = receiver_ty.peel_refs();
 
             let is_string = if let rustc_middle::ty::Adt(adt_def, _) = peeled_ty.kind() {
-                let path = cx.tcx.def_path_str(adt_def.did());
-                path == "soroban_sdk::String" || path.ends_with("::soroban_sdk::String")
+                match_soroban_def_path(cx, adt_def.did(), &["soroban_sdk", "String"])
             } else {
                 false
             };
