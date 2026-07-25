@@ -115,12 +115,14 @@ fn main() {
     cmd.arg("soroban_cost_lints");
     if !lint_flags.is_empty() {
         let mut rustflags = std::env::var("DYLINT_RUSTFLAGS").unwrap_or_default();
+
         for flag in lint_flags {
             if !rustflags.is_empty() {
                 rustflags.push(' ');
             }
             rustflags.push_str(&flag);
         }
+
         cmd.env("DYLINT_RUSTFLAGS", rustflags);
     }
 
