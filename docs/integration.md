@@ -6,6 +6,10 @@
 
 Create a `budget.toml` file in the root of your cargo workspace to adjust lint severities:
 
+The tool locates `budget.toml` by walking up from the current directory until it finds a `Cargo.toml` containing a `[workspace]` section, then looks for `budget.toml` in that directory. This means running `cargo cost-lint` from any member crate produces the same lint levels as running it from the workspace root.
+
+You can also pass an explicit path with `--config <PATH>`, which is used verbatim relative to the current directory.
+
 {% code title="budget.toml" %}
 ```toml
 [lints]
@@ -18,6 +22,12 @@ unnecessary_host_function_call = "warn"
 {% hint style="info" %}
 See the [Lint Reference](lints/) for what each lint catches and its default severity.
 {% endhint %}
+
+### Validation
+
+`cargo cost-lint` strictly validates your `budget.toml`:
+- If an unknown lint **name** is provided (e.g., due to a typo), the tool will print an error listing valid lints and exit immediately. This ensures a mistyped `deny` cannot silently fail to apply.
+- If an unknown lint **level** is provided, the tool will emit an error and exit immediately. Valid levels are `allow`, `warn`, and `deny`.
 
 ## GitHub Actions
 
@@ -41,7 +51,7 @@ jobs:
           toolchain: nightly-2026-04-16
           components: rustc-dev, llvm-tools-preview
       - name: Install Dylint
-        run: cargo install cargo-dylint dylint-link
+        run: cargo install cargo-dylint dylint-link --version "^6.0.1"
       - name: Install soroban-cost-linter
         run: cargo install --git https://github.com/Tollcraft/soroban-cost-linter.git cargo-cost-lint
       - name: Run Cost Linter
@@ -52,3 +62,37 @@ jobs:
 {% hint style="warning" %}
 Keep the pinned `toolchain` in sync with the `soroban-cost-linter` release you install — a mismatched nightly will fail to link the lint library.
 {% endhint %}
+
+## JSON Output and CI Annotations
+
+For machine-readable output, pass `--format json`. `cargo cost-lint` will emit JSON lines (NDJSON) detailing each lint finding. The exit code remains non-zero if a `deny` level lint fires.
+
+### JSON Schema
+Each line of stdout is a JSON object with the following schema:
+```json
+{
+  "name": "soroban_storage_in_loop",
+  "level": "warning",
+  "file": "src/lib.rs",
+  "span": {
+    "line_start": 42,
+    "line_end": 42,
+    "column_start": 13,
+    "column_end": 18
+  },
+  "message": "storage operations in loops are expensive",
+  "help": "consider lifting the storage operation outside the loop"
+}
+```
+
+### GitHub Actions Annotations Example
+You can pipe the JSON output into a tool like `jq` to create GitHub annotations (which show up directly on your PR's Files Changed tab).
+
+```yaml
+      - name: Run Cost Linter (JSON mode with annotations)
+        run: |
+          cargo cost-lint --format json | jq -r '
+            . | "::\(.level) file=\(.file),line=\(.span.line_start),col=\(.span.column_start)::\(.message) (Lint: \(.name))"
+          '
+```
+*(Note: If the linter returns a non-zero exit code due to a `deny` lint, the step will still fail correctly in Actions).*
