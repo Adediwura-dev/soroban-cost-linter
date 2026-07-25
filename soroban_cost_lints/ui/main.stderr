@@ -123,7 +123,7 @@ LL |     let _b = s.to_bytes(); // Should Warn
    = note: `#[warn(unnecessary_string_to_bytes)]` on by default
 
 warning: unnecessary String to Bytes conversion
-  --> $DIR/main.rs:266:14
+  --> $DIR/main.rs:265:14
    |
 LL |     let _b = String::from_str(&env, "hello").to_bytes(); // Should Warn
    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
