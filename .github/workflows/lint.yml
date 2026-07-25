@@ -55,16 +55,15 @@ jobs:
       - name: Install Dylint
         run: cargo +${{ matrix.toolchain }} install cargo-dylint dylint-link --version "^6.0.1"
       - name: Run tests
-        run: cargo +${{ matrix.toolchain }} test --workspace || true
+        run: cargo +${{ matrix.toolchain }} test --workspace
         env:
           UPDATE_EXPECT: 1
       - name: Show diff and push
         run: |
-          git diff
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git commit -am "chore: auto-update stderr" || true
-          git push origin HEAD:${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}} || true
+          git push || true
 
 
 
