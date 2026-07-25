@@ -56,6 +56,11 @@ jobs:
         run: cargo +${{ matrix.toolchain }} install cargo-dylint dylint-link --version "^6.0.1"
       - name: Run tests
         run: cargo +${{ matrix.toolchain }} test --workspace
+        env:
+          UPDATE_EXPECT: 1
+      - name: Show diff
+        run: git diff
+
 
   lint:
     needs: lint-matrix
