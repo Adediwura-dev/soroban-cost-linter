@@ -32,7 +32,18 @@ pub mod soroban_sdk {
 
     pub struct Address;
 
-    pub mod storage {
+    pub struct String;
+    impl Clone for String {
+        fn clone(&self) -> Self { String }
+    }
+    impl String {
+        pub fn from_str(_env: &Env, _s: &str) -> String { String }
+        pub fn to_bytes(&self) -> Bytes { Bytes }
+    }
+
+    pub struct Bytes;
+
+    pub mod storage{
         pub struct Storage;
         impl Storage {
             pub fn instance(&self) -> Instance { Instance }
@@ -113,7 +124,7 @@ pub mod soroban_sdk {
     }
 }
 
-use soroban_sdk::{Env, Symbol};
+use soroban_sdk::{Env, String, Symbol};
 
 // =======================================================================
 // soroban_storage_in_loop — Fixtures
@@ -239,6 +250,29 @@ fn good_deployer_call_outside_loop(env: Env) {
     for _ in 0..10 {
         let _hash = hash;
     }
+}
+
+// =======================================================================
+// unnecessary_string_to_bytes — Fixtures
+// =======================================================================
+
+fn bad_string_to_bytes(env: Env) {
+    let s = String::from_str(&env, "hello");
+    let _b = s.to_bytes(); // Should Warn
+}
+
+fn bad_string_to_bytes_inline(env: Env) {
+    let _b = String::from_str(&env, "hello").to_bytes(); // Should Warn
+}
+
+fn good_string_without_to_bytes(env: Env) {
+    let _s = String::from_str(&env, "hello"); // Good
+}
+
+#[allow(unnecessary_string_to_bytes)]
+fn allowed_string_to_bytes(env: Env) {
+    let s = String::from_str(&env, "hello");
+    let _b = s.to_bytes(); // Good (allowed)
 }
 
 // =======================================================================
