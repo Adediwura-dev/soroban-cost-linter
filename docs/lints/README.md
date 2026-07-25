@@ -2,6 +2,10 @@
 
 This section provides detailed documentation for all lints supported by `soroban-cost-linter`.
 
+{% hint style="info" %}
+See the [Cost Rationale](../cost_rationale.md) page for a full explanation of Soroban's metered resources and why each resource matters.
+{% endhint %}
+
 ## Storage Operations
 
 | Lint                                                                  | Default Severity | Catches                                    |
