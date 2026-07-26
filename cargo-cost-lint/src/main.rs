@@ -57,53 +57,13 @@ struct SarifTool {
     driver: SarifToolDriver,
 }
 
+#[allow(non_snake_case)]
 #[derive(Serialize)]
 struct SarifToolDriver {
     name: String,
     version: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     informationUri: Option<String>,
-}
-
-#[derive(Serialize)]
-struct SarifResult {
-    ruleId: String,
-    level: String,
-    message: SarifMessage,
-    locations: Vec<SarifLocation>,
-}
-
-#[derive(Serialize)]
-struct SarifMessage {
-    text: String,
-}
-
-#[derive(Serialize)]
-struct SarifLocation {
-    physicalLocation: SarifPhysicalLocation,
-}
-
-#[derive(Serialize)]
-struct SarifPhysicalLocation {
-    artifactLocation: SarifArtifactLocation,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    region: Option<SarifRegion>,
-}
-
-#[derive(Serialize)]
-struct SarifArtifactLocation {
-    uri: String,
-}
-
-#[derive(Serialize)]
-struct SarifRegion {
-    startLine: usize,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    startColumn: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    endLine: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    endColumn: Option<usize>,
 }
 
 #[derive(Parser, Debug)]
