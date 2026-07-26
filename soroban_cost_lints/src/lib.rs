@@ -244,6 +244,10 @@ pub const LINT_METADATA: &[LintMetadata] = &[
         lint: BYTES_APPEND_IN_LOOP,
         category: LintCategory::Memory,
     },
+    LintMetadata {
+        lint: SIGNATURE_VERIFICATION_IN_LOOP,
+        category: LintCategory::Compute,
+    },
 ];
 
 #[unsafe(no_mangle)]
@@ -258,6 +262,7 @@ pub fn register_lints(_sess: &rustc_session::Session, lint_store: &mut LintStore
         INEFFICIENT_BYTES_CONCAT,
         MAP_INSERT_IN_LOOP,
         BYTES_APPEND_IN_LOOP,
+        SIGNATURE_VERIFICATION_IN_LOOP,
     ]);
     lint_store.register_late_pass(|_| Box::new(SorobanStorageInLoop));
     lint_store.register_late_pass(|_| Box::new(RedundantEnvClone));
@@ -268,6 +273,7 @@ pub fn register_lints(_sess: &rustc_session::Session, lint_store: &mut LintStore
     lint_store.register_late_pass(|_| Box::new(InefficientBytesConcat));
     lint_store.register_late_pass(|_| Box::new(MapInsertInLoop));
     lint_store.register_late_pass(|_| Box::new(BytesAppendInLoop));
+    lint_store.register_late_pass(|_| Box::new(SignatureVerificationInLoop));
 }
 
 rustc_session::declare_lint! {
@@ -755,6 +761,60 @@ impl<'tcx> LateLintPass<'tcx> for MapInsertInLoop {
                     "Map::insert inside a loop is expensive",
                     None,
                     "accumulate mutations in memory first and write once after the loop",
+                );
+            }
+        }
+    }
+}
+
+// =======================================================================
+// signature_verification_in_loop — Lint
+// =======================================================================
+
+/// Signature-verification and public-key-recovery methods on the `Crypto`
+/// accessor. Each of these performs a full elliptic-curve check — one of the
+/// most CPU-expensive host functions available — so unlike a cheap, constant
+/// host call this cost cannot be hoisted out of the loop: every iteration
+/// verifies a different signature. Repeating it per iteration is a
+/// structural sign that signatures are being checked one at a time instead
+/// of via a scheme that supports batch or aggregate verification.
+const SIGNATURE_VERIFICATION_METHODS: &[&str] =
+    &["ed25519_verify", "secp256k1_recover", "secp256r1_verify"];
+
+rustc_session::declare_lint! {
+    pub SIGNATURE_VERIFICATION_IN_LOOP,
+    Warn,
+    "signature verification performed inside a loop"
+}
+pub struct SignatureVerificationInLoop;
+rustc_session::impl_lint_pass!(SignatureVerificationInLoop => [SIGNATURE_VERIFICATION_IN_LOOP]);
+
+impl<'tcx> LateLintPass<'tcx> for SignatureVerificationInLoop {
+    fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx hir::Expr<'tcx>) {
+        if let hir::ExprKind::MethodCall(path_segment, receiver, _args, _span) = expr.kind
+            && SIGNATURE_VERIFICATION_METHODS.contains(&path_segment.ident.name.as_str())
+        {
+            let receiver_ty = cx.typeck_results().expr_ty(receiver);
+            let peeled_ty = receiver_ty.peel_refs();
+
+            let is_crypto = if let rustc_middle::ty::Adt(adt_def, _) = peeled_ty.kind() {
+                let did = adt_def.did();
+                match_soroban_def_path(cx, did, &["soroban_sdk", "crypto", "Crypto"])
+                    || match_soroban_def_path(cx, did, &["soroban_sdk", "crypto", "CryptoHazmat"])
+            } else {
+                false
+            };
+
+            if is_crypto && enclosing_loop(cx, expr).is_some() {
+                span_lint_and_help(
+                    cx,
+                    SIGNATURE_VERIFICATION_IN_LOOP,
+                    expr.span,
+                    "signature verification inside a loop",
+                    None,
+                    "each call re-runs an expensive elliptic-curve check; consider a signature \
+                     scheme that supports batch or aggregate verification, or move per-item \
+                     auth to the callee via a bulk entrypoint",
                 );
             }
         }

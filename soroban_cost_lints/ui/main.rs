@@ -74,6 +74,9 @@ pub mod soroban_sdk {
         impl Crypto {
             pub fn sha256(&self, _data: &[u8]) -> [u8; 32] { [0; 32] }
             pub fn keccak256(&self, _data: &[u8]) -> [u8; 32] { [0; 32] }
+            pub fn ed25519_verify(&self, _public_key: &[u8], _message: &[u8], _signature: &[u8]) {}
+            pub fn secp256k1_recover(&self, _msg_digest: &[u8], _signature: &[u8], _recovery_id: u32) -> [u8; 65] { [0; 65] }
+            pub fn secp256r1_verify(&self, _public_key: &[u8], _msg_digest: &[u8], _signature: &[u8]) {}
         }
     }
 
@@ -440,6 +443,42 @@ fn bad_vec_push_back_in_while_loop() {
 fn good_single_append_outside_loop() {
     let mut bytes = Bytes(vec![]);
     bytes.append(&Bytes(vec![])); // Good - single append outside loop
+}
+
+// =======================================================================
+// signature_verification_in_loop — Fixtures
+// =======================================================================
+
+fn bad_ed25519_verify_in_for_loop(env: Env, pk: [u8; 32], msg: [u8; 32], sig: [u8; 64]) {
+    for _ in 0..10 {
+        env.crypto().ed25519_verify(&pk, &msg, &sig); // Should Warn
+    }
+}
+
+fn bad_secp256k1_recover_in_while_loop(env: Env, digest: [u8; 32], sig: [u8; 64]) {
+    let mut i = 0;
+    while i < 10 {
+        let _pk = env.crypto().secp256k1_recover(&digest, &sig, 0); // Should Warn
+        i += 1;
+    }
+}
+
+fn bad_secp256r1_verify_in_loop_loop(env: Env, pk: [u8; 65], digest: [u8; 32], sig: [u8; 64]) {
+    loop {
+        env.crypto().secp256r1_verify(&pk, &digest, &sig); // Should Warn
+        break;
+    }
+}
+
+fn good_ed25519_verify_outside_loop(env: Env, pk: [u8; 32], msg: [u8; 32], sig: [u8; 64]) {
+    env.crypto().ed25519_verify(&pk, &msg, &sig); // Good — single call, not in a loop
+}
+
+#[allow(signature_verification_in_loop)]
+fn allowed_ed25519_verify_in_loop(env: Env, pk: [u8; 32], msg: [u8; 32], sig: [u8; 64]) {
+    for _ in 0..10 {
+        env.crypto().ed25519_verify(&pk, &msg, &sig); // Good (allowed)
+    }
 }
 
 fn main() {}
