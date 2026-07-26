@@ -15,6 +15,10 @@ and this project adheres to Semantic Versioning.
 - New lint `map_insert_in_loop` detecting `Map::insert()` calls inside loop bodies.
 - `--fix` flag for `cargo-cost-lint` to automatically apply machine-applicable lint suggestions in-place.
 
+### Fixed
+
+- Confirmed that `src/module_17.rs` does not exist and the codebase contains no bitwise manipulation logic; issue #207 is invalid.
+
 ### Changed
 
 - `unnecessary_host_function_call` now covers every host accessor reachable from
