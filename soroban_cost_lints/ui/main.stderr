@@ -1,5 +1,5 @@
 warning: storage operation inside a loop
-  --> $DIR/main.rs:135:9
+  --> $DIR/main.rs:155:9
    |
 LL |         env.storage().instance().set(&i, &1); // Should Warn
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -8,7 +8,7 @@ LL |         env.storage().instance().set(&i, &1); // Should Warn
    = note: `#[warn(soroban_storage_in_loop)]` on by default
 
 warning: storage operation inside a loop
-  --> $DIR/main.rs:135:9
+  --> $DIR/main.rs:155:9
    |
 LL |         env.storage().instance().set(&i, &1); // Should Warn
    |         ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -16,7 +16,7 @@ LL |         env.storage().instance().set(&i, &1); // Should Warn
    = help: move storage operations out of the loop or accumulate mutations in memory first
 
 warning: storage operation inside a loop
-  --> $DIR/main.rs:135:9
+  --> $DIR/main.rs:155:9
    |
 LL |         env.storage().instance().set(&i, &1); // Should Warn
    |         ^^^^^^^^^^^^^
@@ -24,7 +24,7 @@ LL |         env.storage().instance().set(&i, &1); // Should Warn
    = help: move storage operations out of the loop or accumulate mutations in memory first
 
 warning: storage operation inside a loop
-  --> $DIR/main.rs:142:30
+  --> $DIR/main.rs:162:30
    |
 LL |         let _: Option<i32> = env.storage().persistent().get(&i); // Should Warn
    |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -32,7 +32,7 @@ LL |         let _: Option<i32> = env.storage().persistent().get(&i); // Should 
    = help: move storage operations out of the loop or accumulate mutations in memory first
 
 warning: storage operation inside a loop
-  --> $DIR/main.rs:142:30
+  --> $DIR/main.rs:162:30
    |
 LL |         let _: Option<i32> = env.storage().persistent().get(&i); // Should Warn
    |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -40,7 +40,7 @@ LL |         let _: Option<i32> = env.storage().persistent().get(&i); // Should 
    = help: move storage operations out of the loop or accumulate mutations in memory first
 
 warning: storage operation inside a loop
-  --> $DIR/main.rs:142:30
+  --> $DIR/main.rs:162:30
    |
 LL |         let _: Option<i32> = env.storage().persistent().get(&i); // Should Warn
    |                              ^^^^^^^^^^^^^
@@ -48,7 +48,7 @@ LL |         let _: Option<i32> = env.storage().persistent().get(&i); // Should 
    = help: move storage operations out of the loop or accumulate mutations in memory first
 
 warning: storage operation inside a loop
-  --> $DIR/main.rs:149:12
+  --> $DIR/main.rs:169:12
    |
 LL |         if env.storage().temporary().has(&1) { // Should Warn
    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -56,7 +56,7 @@ LL |         if env.storage().temporary().has(&1) { // Should Warn
    = help: move storage operations out of the loop or accumulate mutations in memory first
 
 warning: storage operation inside a loop
-  --> $DIR/main.rs:149:12
+  --> $DIR/main.rs:169:12
    |
 LL |         if env.storage().temporary().has(&1) { // Should Warn
    |            ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -64,7 +64,7 @@ LL |         if env.storage().temporary().has(&1) { // Should Warn
    = help: move storage operations out of the loop or accumulate mutations in memory first
 
 warning: storage operation inside a loop
-  --> $DIR/main.rs:149:12
+  --> $DIR/main.rs:169:12
    |
 LL |         if env.storage().temporary().has(&1) { // Should Warn
    |            ^^^^^^^^^^^^^
@@ -72,7 +72,7 @@ LL |         if env.storage().temporary().has(&1) { // Should Warn
    = help: move storage operations out of the loop or accumulate mutations in memory first
 
 warning: redundant clone on Env object
-  --> $DIR/main.rs:171:19
+  --> $DIR/main.rs:191:19
    |
 LL |     let _cloned = env.clone(); // Should Warn
    |                   ^^^^^^^^^^^
@@ -81,7 +81,7 @@ LL |     let _cloned = env.clone(); // Should Warn
    = note: `#[warn(redundant_env_clone)]` on by default
 
 warning: unnecessary host function call inside loop
-  --> $DIR/main.rs:189:20
+  --> $DIR/main.rs:209:20
    |
 LL |         let _seq = env.ledger().sequence(); // Should Warn
    |                    ^^^^^^^^^^^^^^^^^^^^^^^
@@ -90,7 +90,7 @@ LL |         let _seq = env.ledger().sequence(); // Should Warn
    = note: `#[warn(unnecessary_host_function_call)]` on by default
 
 warning: unnecessary host function call inside loop
-  --> $DIR/main.rs:210:21
+  --> $DIR/main.rs:230:21
    |
 LL |         let _hash = env.crypto().sha256(&data); // Should Warn — same input every iteration
    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -98,7 +98,7 @@ LL |         let _hash = env.crypto().sha256(&data); // Should Warn — same inp
    = help: call this function outside the loop and reuse the result
 
 warning: unnecessary host function call inside loop
-  --> $DIR/main.rs:232:18
+  --> $DIR/main.rs:252:18
    |
 LL |         let _n = env.prng().u64_in_range(0, 100); // Should Warn
    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -106,7 +106,7 @@ LL |         let _n = env.prng().u64_in_range(0, 100); // Should Warn
    = help: call this function outside the loop and reuse the result
 
 warning: unnecessary host function call inside loop
-  --> $DIR/main.rs:238:21
+  --> $DIR/main.rs:258:21
    |
 LL |         let _addr = env.current_contract_address(); // Should Warn
    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -114,7 +114,7 @@ LL |         let _addr = env.current_contract_address(); // Should Warn
    = help: call this function outside the loop and reuse the result
 
 warning: unnecessary String to Bytes conversion
-  --> $DIR/main.rs:261:14
+  --> $DIR/main.rs:281:14
    |
 LL |     let _b = s.to_bytes(); // Should Warn
    |              ^^^^^^^^^^^^
@@ -123,7 +123,7 @@ LL |     let _b = s.to_bytes(); // Should Warn
    = note: `#[warn(unnecessary_string_to_bytes)]` on by default
 
 warning: unnecessary String to Bytes conversion
-  --> $DIR/main.rs:265:14
+  --> $DIR/main.rs:285:14
    |
 LL |     let _b = String::from_str(&env, "hello").to_bytes(); // Should Warn
    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -131,7 +131,7 @@ LL |     let _b = String::from_str(&env, "hello").to_bytes(); // Should Warn
    = help: use the String directly where Bytes is accepted, or construct Bytes directly instead
 
 warning: Symbol::new called with a short literal that could use symbol_short! macro
-  --> $DIR/main.rs:283:16
+  --> $DIR/main.rs:303:16
    |
 LL |     let _sym = Symbol::new(&env, "hello"); // Should Warn - 5 chars, valid
    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^ help: use symbol_short! macro for compile-time symbol creation: `symbol_short!("hello")`
@@ -139,16 +139,32 @@ LL |     let _sym = Symbol::new(&env, "hello"); // Should Warn - 5 chars, valid
    = note: `#[warn(symbol_new_for_short_literal)]` on by default
 
 warning: Symbol::new called with a short literal that could use symbol_short! macro
-  --> $DIR/main.rs:287:16
+  --> $DIR/main.rs:307:16
    |
 LL |     let _sym = Symbol::new(&env, "abcdefghi"); // Should Warn - exactly 9 chars
    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: use symbol_short! macro for compile-time symbol creation: `symbol_short!("abcdefghi")`
 
 warning: Symbol::new called with a short literal that could use symbol_short! macro
-  --> $DIR/main.rs:295:16
+  --> $DIR/main.rs:315:16
    |
 LL |     let _sym = Symbol::new(&env, "hello_wor"); // Should Warn - 9 chars with underscore
    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: use symbol_short! macro for compile-time symbol creation: `symbol_short!("hello_wor")`
 
-warning: 19 warnings emitted
+warning: repeatedly growing SDK container inside a loop
+  --> $DIR/main.rs:347:9
+   |
+LL |         bytes.append(&Bytes); // Should Warn
+   |         ^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: accumulate values in native Rust collections first, then batch host operations or convert to SDK containers once after the loop; pre-size where practical
+   = note: `#[warn(bytes_append_in_loop)]` on by default
 
+warning: repeatedly growing SDK container inside a loop
+  --> $DIR/main.rs:355:9
+   |
+LL |         v.push_back(i); // Should Warn
+   |         ^^^^^^^^^^^^^^
+   |
+   = help: accumulate values in native Rust collections first, then batch host operations or convert to SDK containers once after the loop; pre-size where practical
+
+warning: 21 warnings emitted

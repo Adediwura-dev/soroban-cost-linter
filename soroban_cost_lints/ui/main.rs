@@ -118,13 +118,33 @@ pub mod soroban_sdk {
         }
     }
 
+    pub struct Bytes;
+    impl Bytes {
+        pub fn append(&mut self, _other: &Bytes) {}
+        pub fn push_back(&mut self, _v: i32) {}
+        pub fn insert(&mut self, _pos: u32, _v: i32) {}
+        pub fn extend_from_array(&mut self, _v: &[i32]) {}
+    }
+
+    pub struct Vec;
+    impl Vec {
+        pub fn push_back(&mut self, _v: i32) {}
+        pub fn insert(&mut self, _pos: u32, _v: i32) {}
+        pub fn extend_from_array(&mut self, _v: &[i32]) {}
+    }
+
+    pub struct Map;
+    impl Map {
+        pub fn insert(&mut self, _k: i32, _v: i32) {}
+    }
+
     pub struct Symbol;
     impl Symbol {
         pub fn new(_env: &Env, _s: &str) -> Symbol { Symbol }
     }
 }
 
-use soroban_sdk::{Env, String, Symbol};
+use soroban_sdk::{Bytes, Env, Map, String, Symbol, Vec};
 
 // =======================================================================
 // soroban_storage_in_loop — Fixtures
@@ -287,8 +307,8 @@ fn bad_symbol_new_9_chars(env: Env) {
     let _sym = Symbol::new(&env, "abcdefghi"); // Should Warn - exactly 9 chars
 }
 
-fn bad_symbol_new_with_underscore(env: Env) {
-    let _sym = Symbol::new(&env, "hello_world"); // Should Warn - 11 chars but only 9 allowed
+fn good_symbol_new_with_underscore_too_long(env: Env) {
+    let _sym = Symbol::new(&env, "hello_world"); // Good - 11 chars > 9
 }
 
 fn bad_symbol_new_short_with_underscore(env: Env) {
@@ -315,6 +335,31 @@ fn good_symbol_new_empty(env: Env) {
 #[allow(symbol_new_for_short_literal)]
 fn allowed_symbol_new_short_literal(env: Env) {
     let _sym = Symbol::new(&env, "hello"); // Good (allowed)
+}
+
+// =======================================================================
+// bytes_append_in_loop — Fixtures
+// =======================================================================
+
+fn bad_bytes_append_in_for_loop() {
+    let mut bytes = Bytes;
+    for _ in 0..10 {
+        bytes.append(&Bytes); // Should Warn
+    }
+}
+
+fn bad_vec_push_back_in_while_loop() {
+    let mut v = Vec;
+    let mut i = 0;
+    while i < 10 {
+        v.push_back(i); // Should Warn
+        i += 1;
+    }
+}
+
+fn good_single_append_outside_loop() {
+    let mut bytes = Bytes;
+    bytes.append(&Bytes); // Good - single append outside loop
 }
 
 fn main() {}

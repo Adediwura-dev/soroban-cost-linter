@@ -45,9 +45,11 @@ struct Cli {
 
 #[derive(Deserialize, Debug)]
 struct BudgetConfig {
-    // Reserved for budget.toml lint-level overrides; the validation logic
-    // that reads this is a pre-existing stub, unrelated to .lintignore.
-    #[allow(dead_code)]
+    budget: Option<BudgetSection>,
+}
+
+#[derive(Deserialize, Debug)]
+struct BudgetSection {
     lints: Option<std::collections::HashMap<String, String>>,
 }
 
@@ -97,13 +99,18 @@ fn main() {
 
     let allowed = allowed_files(Path::new("."));
 
-    let lint_flags: Vec<String> = Vec::new();
     if let Some(config_path) = &cli.config {
         if Path::new(config_path).exists() {
             if let Ok(config_str) = fs::read_to_string(config_path) {
                 if let Ok(config) = toml::from_str::<BudgetConfig>(&config_str) {
-                    // ... validate (existing code)
-                    let _ = config;
+                    if let Some(budget) = config.budget {
+                        if let Some(lints) = budget.lints {
+                            for (lint_name, level) in &lints {
+                                let _ = (lint_name, level);
+                                // Budget lint-level overrides can be applied here in the future.
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -113,18 +120,6 @@ fn main() {
     cmd.arg("dylint");
     cmd.arg("--lib");
     cmd.arg("soroban_cost_lints");
-    if !lint_flags.is_empty() {
-        let mut rustflags = std::env::var("DYLINT_RUSTFLAGS").unwrap_or_default();
-
-        for flag in lint_flags {
-            if !rustflags.is_empty() {
-                rustflags.push(' ');
-            }
-            rustflags.push_str(&flag);
-        }
-
-        cmd.env("DYLINT_RUSTFLAGS", rustflags);
-    }
 
     // Always ask dylint for JSON diagnostics internally, regardless of the
     // user-facing --format, so .lintignore filtering applies to both
