@@ -41,8 +41,6 @@ pub mod soroban_sdk {
         pub fn to_bytes(&self) -> Bytes { Bytes }
     }
 
-    pub struct Bytes;
-
     pub mod storage{
         pub struct Storage;
         impl Storage {
