@@ -162,6 +162,13 @@ LL |     let _b = String::from_str(&env, "hello").to_bytes(); // Should Warn
    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = help: use the String directly where Bytes is accepted, or construct Bytes directly instead
+warning: unnecessary host function call inside loop
+  --> $DIR/main.rs:254:20
+   |
+LL |         let _seq = env.ledger().sequence(); // Should Warn — called once per closure invocation
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: call this function outside the loop and reuse the result
 
 warning: Symbol::new called with a short literal that could use symbol_short! macro
   --> $DIR/main.rs:331:16
