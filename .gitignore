@@ -2,4 +2,5 @@
 node_modules/
 package-lock.json
 tests/corpus/contracts/*/target
+tests/cli_integration_workspace/target/
 *.rcgu.o

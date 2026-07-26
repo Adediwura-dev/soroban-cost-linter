@@ -49,7 +49,7 @@ struct SarifReport {
 #[derive(Serialize)]
 struct SarifRun {
     tool: SarifTool,
-    results: Vec<SarifResult>,
+    results: Vec<serde_json::Value>,
 }
 
 #[derive(Serialize)]
