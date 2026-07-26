@@ -200,6 +200,18 @@ pub const LINT_METADATA: &[LintMetadata] = &[
         category: LintCategory::SymbolOperations,
     },
     LintMetadata {
+        lint: STORAGE_WRITE_WITHOUT_READ,
+        category: LintCategory::StorageOperations,
+    },
+    LintMetadata {
+        lint: INEFFICIENT_BYTES_CONCAT,
+        category: LintCategory::Memory,
+    },
+    LintMetadata {
+        lint: MAP_INSERT_IN_LOOP,
+        category: LintCategory::StorageOperations,
+    },
+    LintMetadata {
         lint: BYTES_APPEND_IN_LOOP,
         category: LintCategory::Memory,
     },
@@ -213,6 +225,9 @@ pub fn register_lints(_sess: &rustc_session::Session, lint_store: &mut LintStore
         UNNECESSARY_HOST_FUNCTION_CALL,
         HOST_IN_LOOP,
         SYMBOL_NEW_FOR_SHORT_LITERAL,
+        STORAGE_WRITE_WITHOUT_READ,
+        INEFFICIENT_BYTES_CONCAT,
+        MAP_INSERT_IN_LOOP,
         BYTES_APPEND_IN_LOOP,
     ]);
     lint_store.register_late_pass(|_| Box::new(SorobanStorageInLoop));
@@ -220,6 +235,9 @@ pub fn register_lints(_sess: &rustc_session::Session, lint_store: &mut LintStore
     lint_store.register_late_pass(|_| Box::new(UnnecessaryHostFunctionCall));
     lint_store.register_late_pass(|_| Box::new(HostInLoop));
     lint_store.register_late_pass(|_| Box::new(SymbolNewForShortLiteral));
+    lint_store.register_late_pass(|_| Box::new(StorageWriteWithoutRead));
+    lint_store.register_late_pass(|_| Box::new(InefficientBytesConcat));
+    lint_store.register_late_pass(|_| Box::new(MapInsertInLoop));
     lint_store.register_late_pass(|_| Box::new(BytesAppendInLoop));
 }
 
@@ -476,6 +494,200 @@ fn is_valid_short_symbol(s: &str) -> bool {
         return false;
     }
     s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
+// =======================================================================
+// storage_write_without_read — Lint
+// =======================================================================
+
+rustc_session::declare_lint! {
+    pub STORAGE_WRITE_WITHOUT_READ,
+    Warn,
+    "storage write without a corresponding read"
+}
+pub struct StorageWriteWithoutRead;
+rustc_session::impl_lint_pass!(StorageWriteWithoutRead => [STORAGE_WRITE_WITHOUT_READ]);
+
+impl<'tcx> LateLintPass<'tcx> for StorageWriteWithoutRead {
+    fn check_fn(
+        &mut self,
+        cx: &LateContext<'tcx>,
+        _: rustc_hir::intravisit::FnKind<'tcx>,
+        _: &'tcx hir::FnDecl<'tcx>,
+        body: &'tcx hir::Body<'tcx>,
+        _: rustc_span::Span,
+        _: rustc_hir::def_id::LocalDefId,
+    ) {
+        struct ReadVisitor<'a, 'tcx> {
+            cx: &'a LateContext<'tcx>,
+            reads: Vec<(String, String)>,
+        }
+
+        impl<'a, 'tcx> Visitor<'tcx> for ReadVisitor<'a, 'tcx> {
+            fn visit_expr(&mut self, expr: &'tcx hir::Expr<'tcx>) {
+                if let hir::ExprKind::MethodCall(path_segment, receiver, args, _span) = &expr.kind {
+                    let receiver_ty = self.cx.typeck_results().expr_ty(receiver);
+                    let peeled_ty = receiver_ty.peel_refs();
+
+                    let is_storage = if let rustc_middle::ty::Adt(adt_def, _) = peeled_ty.kind() {
+                        matches_any_path(self.cx, adt_def.did(), SOROBAN_STORAGE_TYPES)
+                    } else {
+                        false
+                    };
+
+                    let method_name = path_segment.ident.name.as_str();
+                    if is_storage
+                        && (method_name == "get" || method_name == "has")
+                        && !args.is_empty()
+                    {
+                        let receiver_snippet =
+                            snippet_opt(self.cx, receiver.span).unwrap_or_default();
+                        let key_snippet = snippet_opt(self.cx, args[0].span).unwrap_or_default();
+                        self.reads.push((receiver_snippet, key_snippet));
+                    }
+                }
+                intravisit::walk_expr(self, expr);
+            }
+        }
+
+        struct WriteVisitor<'a, 'tcx> {
+            cx: &'a LateContext<'tcx>,
+            writes: Vec<(String, String, rustc_span::Span)>,
+        }
+
+        impl<'a, 'tcx> Visitor<'tcx> for WriteVisitor<'a, 'tcx> {
+            fn visit_expr(&mut self, expr: &'tcx hir::Expr<'tcx>) {
+                if let hir::ExprKind::MethodCall(path_segment, receiver, args, span) = &expr.kind {
+                    let receiver_ty = self.cx.typeck_results().expr_ty(receiver);
+                    let peeled_ty = receiver_ty.peel_refs();
+
+                    let is_storage = if let rustc_middle::ty::Adt(adt_def, _) = peeled_ty.kind() {
+                        matches_any_path(self.cx, adt_def.did(), SOROBAN_STORAGE_TYPES)
+                    } else {
+                        false
+                    };
+
+                    if is_storage && path_segment.ident.name.as_str() == "set" && args.len() >= 2 {
+                        let receiver_snippet =
+                            snippet_opt(self.cx, receiver.span).unwrap_or_default();
+                        let key_snippet = snippet_opt(self.cx, args[0].span).unwrap_or_default();
+                        self.writes.push((receiver_snippet, key_snippet, *span));
+                    }
+                }
+                intravisit::walk_expr(self, expr);
+            }
+        }
+
+        let reads = Vec::new();
+        let writes = Vec::new();
+        let mut read_visitor = ReadVisitor { cx, reads };
+        read_visitor.visit_body(body);
+
+        let mut write_visitor = WriteVisitor { cx, writes };
+        write_visitor.visit_body(body);
+
+        for (w_receiver, w_key, w_span) in &write_visitor.writes {
+            let has_read = read_visitor
+                .reads
+                .iter()
+                .any(|(r_receiver, r_key)| r_receiver == w_receiver && r_key == w_key);
+            if !has_read {
+                span_lint_and_help(
+                    cx,
+                    STORAGE_WRITE_WITHOUT_READ,
+                    *w_span,
+                    "storage write without a corresponding read",
+                    None,
+                    "consider reading the value before writing or using `.has()` to check existence",
+                );
+            }
+        }
+    }
+}
+
+// =======================================================================
+// inefficient_bytes_concat — Lint
+// =======================================================================
+
+rustc_session::declare_lint! {
+    pub INEFFICIENT_BYTES_CONCAT,
+    Warn,
+    "inefficient bytes concatenation"
+}
+pub struct InefficientBytesConcat;
+rustc_session::impl_lint_pass!(InefficientBytesConcat => [INEFFICIENT_BYTES_CONCAT]);
+
+impl<'tcx> LateLintPass<'tcx> for InefficientBytesConcat {
+    fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx hir::Expr<'tcx>) {
+        if let hir::ExprKind::Binary(op, lhs, rhs) = &expr.kind
+            && let hir::BinOpKind::Add = op.node
+        {
+            let lhs_ty = cx.typeck_results().expr_ty(lhs);
+            let rhs_ty = cx.typeck_results().expr_ty(rhs);
+            let is_bytes = is_bytes_type(cx, lhs_ty) || is_bytes_type(cx, rhs_ty);
+            let is_in_loop = enclosing_loop(cx, expr).is_some();
+            if is_bytes && is_in_loop {
+                span_lint_and_help(
+                    cx,
+                    INEFFICIENT_BYTES_CONCAT,
+                    expr.span,
+                    "inefficient bytes concatenation in a loop",
+                    None,
+                    "use a Vec<u8> buffer to accumulate bytes and convert to Bytes after the loop",
+                );
+            }
+        }
+    }
+}
+
+fn is_bytes_type<'tcx>(cx: &LateContext<'tcx>, ty: rustc_middle::ty::Ty<'tcx>) -> bool {
+    if let rustc_middle::ty::Adt(adt_def, _) = ty.kind() {
+        match_soroban_def_path(cx, adt_def.did(), &["soroban_sdk", "Bytes"])
+    } else {
+        false
+    }
+}
+
+// =======================================================================
+// map_insert_in_loop — Lint
+// =======================================================================
+
+rustc_session::declare_lint! {
+    pub MAP_INSERT_IN_LOOP,
+    Warn,
+    "Map::insert called inside a loop"
+}
+pub struct MapInsertInLoop;
+rustc_session::impl_lint_pass!(MapInsertInLoop => [MAP_INSERT_IN_LOOP]);
+
+impl<'tcx> LateLintPass<'tcx> for MapInsertInLoop {
+    fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx hir::Expr<'tcx>) {
+        if let hir::ExprKind::MethodCall(path_segment, receiver, _args, _span) = &expr.kind {
+            if path_segment.ident.name.as_str() != "insert" {
+                return;
+            }
+
+            let receiver_ty = cx.typeck_results().expr_ty(receiver);
+            let peeled_ty = receiver_ty.peel_refs();
+
+            let is_map = if let rustc_middle::ty::Adt(adt_def, _) = peeled_ty.kind() {
+                match_soroban_def_path(cx, adt_def.did(), &["soroban_sdk", "Map"])
+            } else {
+                false
+            };
+
+            if is_map && enclosing_loop(cx, expr).is_some() {
+                span_lint_and_help(
+                    cx,
+                    MAP_INSERT_IN_LOOP,
+                    expr.span,
+                    "Map::insert inside a loop is expensive",
+                    None,
+                    "accumulate mutations in memory first and write once after the loop",
+                );
+            }
+        }
+    }
 }
 
 #[test]
