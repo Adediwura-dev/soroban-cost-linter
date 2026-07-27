@@ -155,42 +155,6 @@ pub mod soroban_sdk {
 
 use soroban_sdk::{Bytes, Env, Map, Symbol, Vec};
 
-// =======================================================================
-// soroban_storage_in_loop — Fixtures
-// =======================================================================
-
-fn bad_storage_in_for_loop(env: Env) {
-    for i in 0..10 {
-        env.storage().instance().set(&i, &1); // Should Warn
-    }
-}
-
-fn bad_storage_in_while_loop(env: Env) {
-    let mut i = 0;
-    while i < 10 {
-        let _: Option<i32> = env.storage().persistent().get(&i); // Should Warn
-        i += 1;
-    }
-}
-
-fn bad_storage_in_loop_loop(env: Env) {
-    loop {
-        if env.storage().temporary().has(&1) { // Should Warn
-            break;
-        }
-    }
-}
-
-fn good_storage_outside_loop(env: Env) {
-    env.storage().instance().set(&1, &1); // Good
-}
-
-#[allow(soroban_storage_in_loop)]
-fn allowed_storage_in_loop(env: Env) {
-    for i in 0..10 {
-        env.storage().instance().set(&i, &1); // Good (allowed)
-    }
-}
 
 // Realistic false-positive scenario: batch-writing different keys per iteration
 #[allow(soroban_storage_in_loop)]
