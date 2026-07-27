@@ -44,30 +44,43 @@ Both tools share configuration via a unified `budget.toml` file for thresholds a
 
 ### Prerequisites
 
-Since `soroban-cost-linter` hooks directly into Rust's AST, it relies on [Dylint](https://github.com/trailofbits/dylint) to run dynamic library lints. The linter library requires Dylint version `^6.0.1`.
+Since `soroban-cost-linter` hooks directly into Rust's AST, its lint library links against `rustc_private` and therefore **must be built with the same nightly toolchain** that the project pins. The exact channel is declared in the [`rust-toolchain`](rust-toolchain) file at the repository root.
 
-```bash
-cargo install cargo-dylint dylint-link --version "^6.0.1"
-```
+1. **Install the pinned nightly toolchain** — see the [`rust-toolchain`](rust-toolchain) file for the exact channel (as of this writing, the CI uses `nightly-2026-04-16`).
+
+   ```bash
+   rustup toolchain install <channel-from-rust-toolchain>
+   ```
+
+2. **Install Dylint** — the linter relies on [Dylint](https://github.com/trailofbits/dylint) version `^6.0.1` to run dynamic library lints:
+
+   ```bash
+   cargo install cargo-dylint dylint-link --version "^6.0.1"
+   ```
 
 ### Installation
 
-Add the linter to your Soroban workspace:
+Add the linter to your Soroban workspace. **Ensure you are using the pinned nightly toolchain** (see [Prerequisites](#prerequisites)) when building:
 
 ```bash
-cargo install --git https://github.com/Tollcraft/soroban-cost-linter.git cargo-cost-lint
-
+cargo +<channel-from-rust-toolchain> install --git https://github.com/Tollcraft/soroban-cost-linter.git cargo-cost-lint
 ```
+
+> **Why is the nightly required?** The lint library links against `rustc_private`, which is only available on nightly compilers. A different nightly version may produce linker errors due to ABI mismatches.
 
 ## Quick Start
 
-```bash
-# Install the tool
-cargo install --git https://github.com/Tollcraft/soroban-cost-linter.git cargo-cost-lint
+1. Complete the [Prerequisites](#prerequisites) (nightly toolchain + Dylint).
+2. Install the linter using the pinned nightly:
 
-# Run it on your Soroban project
-cargo cost-lint
-```
+   ```bash
+   cargo +<channel-from-rust-toolchain> install --git https://github.com/Tollcraft/soroban-cost-linter.git cargo-cost-lint
+   ```
+3. Run it on your Soroban project:
+
+   ```bash
+   cargo cost-lint
+   ```
 
 ## Usage
 
