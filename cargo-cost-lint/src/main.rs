@@ -49,7 +49,7 @@ struct SarifReport {
 #[derive(Serialize)]
 struct SarifRun {
     tool: SarifTool,
-    results: Vec<SarifResult>,
+    results: Vec<serde_json::Value>,
 }
 
 #[derive(Serialize)]
@@ -400,6 +400,7 @@ fn main() {
                         information_uri: Some(
                             "https://github.com/Tollcraft/soroban-cost-linter".to_string(),
                         ),
+                        rules,
                     },
                 },
                 results: sarif_results,
